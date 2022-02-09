@@ -22,10 +22,16 @@ All the changes: https://github.com/FFmpeg/FFmpeg/compare/master...goncalomb:lk7
 
 ## Building ffmpeg (with lk7777 support)
 
-    git clone --depth=1 -b lk7777 https://github.com/goncalomb/FFmpeg.git
-    cd FFmpeg
+    git clone --recursive --shallow-submodules --depth=1 https://github.com/goncalomb/lk-tools.git
+    cd lk-tools/FFmpeg
     ./configure
     make -j 16
+
+### Cross Compiling for armv7, e.g. Raspberry Pi (Docker required)
+
+    git clone --recursive --shallow-submodules --depth=1 https://github.com/goncalomb/lk-tools.git
+    cd lk-tools/FFmpeg-build
+    ./build-linux-armv7.sh
 
 ## Usage and Examples
 
