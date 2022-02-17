@@ -1,4 +1,4 @@
 [submodule "FFmpeg"]
-	path = FFmpeg
+	path = FFmpeg/FFmpeg
 	url = ../FFmpeg.git
 	branch = lk7777

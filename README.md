@@ -25,7 +25,7 @@ Usage of this format over other transports is unknown ATM.
 
 ## Tools & Scripts
 
-* [ffmpeg with lk7777 support](ffmpeg-lk7777.md)
+* [ffmpeg with lk7777 support](FFmpeg/)
 
 ## Community & Other Work
 
