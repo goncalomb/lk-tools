@@ -25,7 +25,8 @@ Usage of this format over other transports is unknown ATM.
 
 ## Tools & Scripts
 
-* [ffmpeg with lk7777 support](FFmpeg/)
+* [FFmpeg with lk7777 support](FFmpeg/)
+* [Raspberry Pi scripts](rpi/)
 
 ## Community & Other Work
 
