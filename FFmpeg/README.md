@@ -1,33 +1,28 @@
-# ffmpeg with lk7777 support
+# FFmpeg with lk7777 support
 
-I'm working on a demuxer that allows ffmpeg to decode lk7777. It works! But there is still some work to be done. And the format is not fully known yet.
+A [demuxer](https://ffmpeg.org/ffmpeg-formats.html#Demuxers) that allows FFmpeg to decode lk7777. This has grown to be a two part project:
 
-This is heavily based on the findings by kitten_nb_five...
+* [lk7777.c](https://github.com/goncalomb/FFmpeg/blob/lk7777/libavformat/lk7777.c): the main **demuxer** that actually decodes the packets
+* [udplk7777.c](https://github.com/goncalomb/FFmpeg/blob/lk7777/libavformat/udplk7777.c): some **UDP heuristics** to mitigate problems with out of order UDP packets
 
-* https://freenode.logbot.info/lkv373a/20210220
+The FFmpeg code is in a [separate repository (lk7777 branch)](https://github.com/goncalomb/FFmpeg/tree/lk7777) linked as a submodule here ([diff with FFmpeg master](https://github.com/FFmpeg/FFmpeg/compare/master...goncalomb:FFmpeg:lk7777)).
+
+The **demuxer** is based on the findings by @kittennbfive:
+
+* ~~https://freenode.logbot.info/lkv373a/20210220~~
 * https://github.com/kittennbfive/373-v4-tools
 * https://github.com/kittennbfive/373-v4-tools/blob/main/Protocol.txt
 
-Sending this to be merged with ffmpeg in the future is a possibility. But I need to make sure it's up to ffmpeg's coding requirements.
+The **UDP heuristics** are an attempt at mitigating problems with out of order UDP packets, by analyzing the incoming packets and trying to infer the order based on packet size and other characteristics. It's important to note that the lk7777 packets do not include any explicit sequencing information. This is not and will never be perfect, but can reduce some of the issues with using UDP multicast as the transport layer.
 
-https://ffmpeg.org/developer.html#Contributing
-
-## Code
-
-The ffmpeg fork (lk7777 branch): https://github.com/goncalomb/FFmpeg/tree/lk7777
-
-This is the main demuxer file: https://github.com/goncalomb/FFmpeg/blob/lk7777/libavformat/lk7777.c
-
-All the changes: https://github.com/FFmpeg/FFmpeg/compare/master...goncalomb:lk7777
-
-## Building ffmpeg (with lk7777 support)
+## Compiling FFmpeg (with lk7777 support)
 
     git clone --recursive --shallow-submodules --depth=1 https://github.com/goncalomb/lk-tools.git
     cd lk-tools/FFmpeg/FFmpeg
     ./configure
     make -j 16
 
-### Cross Compiling for armv7, e.g. Raspberry Pi (Docker required)
+### Cross-compiling for armv7, e.g. Raspberry Pi (Docker required)
 
     git clone --recursive --shallow-submodules --depth=1 https://github.com/goncalomb/lk-tools.git
     cd lk-tools/FFmpeg
@@ -70,33 +65,37 @@ Good Bye!!!
 Connection closed by foreign host.
 ```
 
-Use the `-key` argument on ffmpeg to set the key.
-
 ### First Test
 
-    ./ffmpeg -key 00112233445566778899aabbccddeeff -i udp://@239.255.42.42:7777
+Run FFmpeg using the `-key` argument to set the decryption key:
+
+    ./ffmpeg -key 00112233445566778899aabbccddeeff -i udp://239.255.42.42:7777
 
 If the key is correct you should get some description of the streams:
 
 ```
-Input #0, lk7777, from 'udp://@239.255.42.42:7777':
-  Duration: N/A, start: 30030.800000, bitrate: N/A
-  Stream #0:0: Video: h264 (Constrained Baseline), yuvj420p(pc, progressive), 1280x720, 50 fps, 50 tbr, 1k tbn, 120 tbc
+Input #0, lk7777, from 'udp://239.255.42.42:7777':
+  Duration: N/A, start: 103610.704000, bitrate: N/A
+  Stream #0:0: Video: h264 (Main), yuvj420p(pc), 1920x1080, 50 fps, 50 tbr, 1k tbn, 120 tbc
   Stream #0:1: Audio: mp2, 48000 Hz, stereo, s16p, 192 kb/s
 At least one output file must be specified
 ```
 
 ### Examples
 
+> [!NOTE]
+> * The `udplk7777://` protocol enables the packet reordering heuristics, `udp://` (or any other protocol) also works but only uses the demuxer which expects a correct stream of packets (incorrect data will cause visual artifacts).
+> * The `sources=` option is also optional but recommended to filter UDP packets from other addresses.
+
     # pipe directly into vlc
-    ./ffmpeg -key 00112233445566778899aabbccddeeff -i udp://@239.255.42.42:7777 -vcodec copy -acodec copy -f mpegts - | vlc -
+    ./ffmpeg -key 00112233445566778899aabbccddeeff -i udplk7777://239.255.42.42:7777?sources=192.168.1.210 -codec copy -f mpegts - | vlc -
 
     # save to file
-    ./ffmpeg -key 00112233445566778899aabbccddeeff -i udp://@239.255.42.42:7777 -vcodec copy -acodec copy -f mpegts out.ts
-    ./ffmpeg -key 00112233445566778899aabbccddeeff -i udp://@239.255.42.42:7777 -vcodec copy -acodec copy -f matroska out.mkv
+    ./ffmpeg -key 00112233445566778899aabbccddeeff -i udplk7777://239.255.42.42:7777?sources=192.168.1.210 -codec copy -f mpegts out.ts
+    ./ffmpeg -key 00112233445566778899aabbccddeeff -i udplk7777://239.255.42.42:7777?sources=192.168.1.210 -codec copy -f matroska out.mkv
 
     # stream using mpegts (open udp://@127.0.0.1:7778 on vlc)
-    ./ffmpeg -key 00112233445566778899aabbccddeeff -i udp://@239.255.42.42:7777 -vcodec copy -acodec copy -f mpegts udp://127.0.0.1:7778
+    ./ffmpeg -key 00112233445566778899aabbccddeeff -i udplk7777://239.255.42.42:7777?sources=192.168.1.210 -codec copy -f mpegts udp://127.0.0.1:7778
 
     # ffmpeg with trace output (for debugging the demuxer)
-    ./ffmpeg -key 00112233445566778899aabbccddeeff -i udp://@239.255.42.42:7777 -vcodec copy -acodec copy -f mpegts -loglevel trace - | vlc -
+    ./ffmpeg -key 00112233445566778899aabbccddeeff -i udplk7777://239.255.42.42:7777?sources=192.168.1.210 -codec copy -f mpegts -loglevel trace - | vlc -
